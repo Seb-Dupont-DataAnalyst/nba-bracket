@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NBA Playoffs Bracket 2025</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ---- RESET & BASE ---- */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:        #0d0f14;
+      --bg2:       #151820;
+      --bg3:       #1c2030;
+      --border:    rgba(255,255,255,0.08);
+      --border2:   rgba(255,255,255,0.15);
+      --text:      #e8eaf0;
+      --muted:     #6b7280;
+      --accent:    #f97316;
+      --accent2:   #fb923c;
+      --green:     #22c55e;
+      --green-bg:  rgba(34,197,94,0.12);
+      --green-brd: rgba(34,197,94,0.3);
+      --red:       #ef4444;
+      --blue:      #3b82f6;
+      --blue-bg:   rgba(59,130,246,0.12);
+      --radius:    8px;
+      --font-head: 'Barlow Condensed', sans-serif;
+      --font-body: 'Barlow', sans-serif;
+    }
+
+    /* ---- CONFIGURATION — À MODIFIER ---- */
+    /* Voir la section CONFIG JS plus bas */
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 14px;
+      min-height: 100vh;
+    }
+
+    /* ---- HEADER ---- */
+    .header {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .header-title {
+      font-family: var(--font-head);
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      color: var(--text);
+    }
+    .header-title span { color: var(--accent); }
+    .header-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .sync-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .btn { padding: 7px 14px; font-size: 12px; font-family: var(--font-body); border-radius: var(--radius); cursor: pointer; transition: all .15s; border: 1px solid var(--border2); background: transparent; color: var(--text); }
+    .btn:hover { background: var(--bg3); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
+    .btn.primary:hover { background: var(--accent2); }
+    .sync-label { font-size: 11px; color: var(--muted); }
+    .sync-status { font-size: 11px; font-weight: 500; }
+    .sync-status.ok  { color: var(--green); }
+    .sync-status.err { color: var(--red); }
+    .spin { display: inline-block; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ---- BANNER ---- */
+    .banner { margin: 12px 24px 0; padding: 9px 14px; border-radius: var(--radius); font-size: 12px; line-height: 1.5; }
+    .banner.success { background: var(--green-bg); border: 1px solid var(--green-brd); color: var(--green); }
+    .banner.warn    { background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.3); color: #fbbf24; }
+    .banner.danger  { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: var(--red); }
+    .banner.info    { background: var(--blue-bg); border: 1px solid rgba(59,130,246,0.3); color: var(--blue); }
+
+    /* ---- TABS ---- */
+    .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); padding: 0 24px; margin-top: 16px; }
+    .tab { padding: 10px 18px; font-size: 13px; font-family: var(--font-head); font-weight: 600; letter-spacing: .04em; cursor: pointer; border: none; background: transparent; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .15s; }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ---- TAB PANELS ---- */
+    .panel { display: none; padding: 20px 24px; }
+    .panel.active { display: block; }
+
+    /* ---- BRACKET ---- */
+    .bracket-wrap { overflow-x: auto; padding-bottom: 12px; }
+    .bracket { display: flex; gap: 0; min-width: 1020px; }
+    .conf-section { flex: 1; display: flex; gap: 0; }
+    .conf-section.east { flex-direction: row; }
+    .conf-section.west { flex-direction: row-reverse; }
+    .round-col { display: flex; flex-direction: column; justify-content: space-around; padding: 4px 6px; min-width: 158px; }
+    .round-label {
+      font-family: var(--font-head);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+    .finals-col { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px 12px; min-width: 155px; }
+    .finals-col-inner { display: flex; flex-direction: column; align-items: center; gap: 10px; justify-content: center; flex: 1; width: 100%; }
+
+    /* matchup card */
+    .matchup { margin: 4px 0; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--bg2); transition: border-color .2s; }
+    .matchup.synced { border-color: var(--green-brd); }
+    .team-row { display: flex; align-items: center; gap: 7px; padding: 6px 9px; cursor: pointer; transition: background .12s; color: var(--text); }
+    .team-row:hover:not(.locked):not(.tbd) { background: var(--bg3); }
+    .team-row.winner { background: var(--bg3); font-weight: 500; }
+    .team-row.eliminated { opacity: .3; }
+    .team-row.locked, .team-row.tbd { cursor: default; }
+    .team-row.tbd { color: var(--muted); }
+    .seed { font-size: 10px; color: var(--muted); min-width: 13px; font-family: var(--font-head); }
+    .tname { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; font-family: var(--font-head); font-weight: 600; letter-spacing: .03em; }
+    .api-badge { font-size: 9px; padding: 1px 5px; border-radius: 3px; background: var(--green-bg); color: var(--green); border: 1px solid var(--green-brd); }
+    .check { font-size: 10px; color: var(--green); }
+    .divider-h { height: 1px; background: var(--border); }
+    .score-row { display: flex; align-items: center; gap: 5px; padding: 5px 9px; background: var(--bg); border-top: 1px solid var(--border); }
+    .score-label { font-size: 10px; color: var(--muted); flex: 1; font-family: var(--font-head); letter-spacing: .05em; }
+    .score-btns { display: flex; gap: 4px; }
+    .sbtn { padding: 2px 7px; font-size: 10px; font-family: var(--font-head); font-weight: 600; border: 1px solid var(--border2); border-radius: 4px; background: transparent; color: var(--muted); cursor: pointer; transition: all .12s; letter-spacing: .03em; }
+    .sbtn:hover:not(.api-locked) { background: var(--bg3); color: var(--text); }
+    .sbtn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .sbtn.api-locked { cursor: default; opacity: .4; }
+    .lock-icon { font-size: 9px; color: var(--muted); margin-left: 4px; }
+    .matchup-gap { height: 8px; }
+
+    /* champion */
+    .champion-box { text-align: center; padding: 12px 8px; }
+    .trophy { font-size: 28px; }
+    .champ-label { font-family: var(--font-head); font-size: 10px; font-weight: 700; letter-spacing: .12em; color: var(--muted); margin: 4px 0 3px; }
+    .champ-name { font-family: var(--font-head); font-size: 16px; font-weight: 700; color: var(--accent); min-height: 22px; letter-spacing: .04em; }
+    .champ-score { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* conf label */
+    .conf-label { font-family: var(--font-head); font-size: 11px; font-weight: 700; letter-spacing: .1em; color: var(--accent); text-align: center; padding: 6px 0 2px; }
+
+    /* ---- LEADERBOARD ---- */
+    .lb-controls { display: flex; gap: 8px; margin-bottom: 14px; align-items: center; flex-wrap: wrap; }
+    .lb-controls input { flex: 1; min-width: 180px; padding: 7px 12px; font-size: 13px; font-family: var(--font-body); border: 1px solid var(--border2); border-radius: var(--radius); background: var(--bg2); color: var(--text); }
+    .lb-controls input:focus { outline: none; border-color: var(--accent); }
+    table.lb { width: 100%; border-collapse: collapse; font-size: 13px; }
+    table.lb th { font-family: var(--font-head); font-weight: 700; letter-spacing: .06em; font-size: 11px; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+    table.lb td { padding: 9px 10px; border-bottom: 1px solid var(--border); color: var(--text); }
+    table.lb tr:hover td { background: var(--bg2); }
+    .rank-badge { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-size: 11px; font-weight: 700; font-family: var(--font-head); background: var(--bg3); color: var(--muted); }
+    .rank-badge.gold   { background: rgba(250,199,117,0.2); color: #FAC775; }
+    .rank-badge.silver { background: rgba(156,163,175,0.2); color: #9ca3af; }
+    .rank-badge.bronze { background: rgba(180,120,90,0.2); color: #b4785a; }
+    .pts-big { font-family: var(--font-head); font-size: 15px; font-weight: 700; color: var(--accent); }
+    .bonus-cell { color: var(--green); font-size: 12px; }
+    .detail-cell { color: var(--muted); font-size: 12px; }
+
+    /* ---- ADMIN ---- */
+    .admin-section { margin-bottom: 24px; }
+    .admin-section h3 { font-family: var(--font-head); font-size: 15px; font-weight: 700; letter-spacing: .05em; margin-bottom: 12px; color: var(--text); padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    .admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+    .admin-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+    .admin-card .ac-title { font-family: var(--font-head); font-weight: 700; font-size: 13px; letter-spacing: .03em; margin-bottom: 3px; }
+    .admin-card .ac-sub { color: var(--muted); font-size: 11px; }
+    .admin-card button { margin-top: 8px; }
+    .pts-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .pts-table th { font-family: var(--font-head); font-size: 11px; font-weight: 700; letter-spacing: .06em; color: var(--muted); padding: 6px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+    .pts-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    .pts-table td:nth-child(2) { color: var(--accent); font-family: var(--font-head); font-weight: 600; }
+    .pts-table td:nth-child(3) { color: var(--green); font-family: var(--font-head); font-weight: 600; }
+
+    /* ---- MY BRACKET ---- */
+    .pseudo-input { display: flex; gap: 8px; margin-bottom: 14px; align-items: center; }
+    .pseudo-input input { padding: 7px 12px; font-size: 13px; font-family: var(--font-body); border: 1px solid var(--border2); border-radius: var(--radius); background: var(--bg2); color: var(--text); width: 220px; }
+    .pseudo-input input:focus { outline: none; border-color: var(--accent); }
+    .progress-bg { background: var(--bg3); border-radius: 4px; height: 4px; margin-bottom: 5px; }
+    .progress-fill { background: var(--accent); height: 4px; border-radius: 4px; transition: width .3s; }
+    .progress-label { font-size: 11px; color: var(--muted); margin-bottom: 14px; }
+    .save-bar { display: flex; gap: 10px; align-items: center; margin-top: 14px; }
+    .save-msg { font-size: 12px; color: var(--green); }
+
+    /* ---- HINT BOX ---- */
+    .hint { font-size: 11px; color: var(--muted); margin-top: 10px; padding: 8px 12px; background: var(--bg2); border-radius: var(--radius); border-left: 3px solid var(--border2); }
+  </style>
+</head>
+<body>
+
+<!-- ============================================================
+     ⚙️  CONFIGURATION — MODIFIER ICI
+     ============================================================ -->
+<script>
+  // 1. URL CSV de votre Google Sheet publié
+  const SHEET_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRf8bRhqurQmQsLJiqb0ujUylKjul28oUyMasWIXFsm3sskmLgCw_Akxhip2zvDutTWcOjmDfD67WCV/pub?gid=0&single=true&output=csv';
+
+  // 2. Équipes Est — dans l'ordre des matchups R1 : (seed1 vs seed8), (seed4 vs seed5), (seed3 vs seed6), (seed2 vs seed7)
+  const EAST_TEAMS = [
+    {seed:1, name:'Celtics'},   {seed:8, name:'Heat'},
+    {seed:4, name:'Pacers'},    {seed:5, name:'Bucks'},
+    {seed:3, name:'Knicks'},    {seed:6, name:'76ers'},
+    {seed:2, name:'Cavaliers'}, {seed:7, name:'Magic'}
+  ];
+
+  // 3. Équipes Ouest — même ordre
+  const WEST_TEAMS = [
+    {seed:1, name:'Thunder'},      {seed:8, name:'Warriors'},
+    {seed:4, name:'Nuggets'},      {seed:5, name:'Clippers'},
+    {seed:3, name:'Timberwolves'}, {seed:6, name:'Mavericks'},
+    {seed:2, name:'Rockets'},      {seed:7, name:'Lakers'}
+  ];
+
+  // 4. Points par tour
+  const ROUND_PTS   = [10, 12, 15, 20]; // R1, R2, R3 conf, Finals NBA
+  const SCORE_BONUS = 2;                 // bonus si score exact
+</script>
+<!-- ============================================================ -->
+
+<div class="header">
+  <div>
+    <div class="header-title">🏀 NBA <span>Playoffs</span> 2025</div>
+    <div class="header-sub">Concours de pronostics — gagnant + score de série</div>
+  </div>
+  <div class="sync-bar">
+    <button class="btn primary" onclick="loadFromSheet()">⟳ Actualiser</button>
+    <button class="btn" onclick="showTab('admin')">⚙ Admin</button>
+    <span class="sync-label">Sync auto 7h + 8h (Paris)</span>
+    <span class="sync-status" id="sync-status"></span>
+  </div>
+</div>
+
+<div id="main-banner" class="banner info" style="display:none"></div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('bracket')">Bracket officiel</button>
+  <button class="tab" onclick="showTab('my-bracket')">Mon bracket</button>
+  <button class="tab" onclick="showTab('leaderboard')">Classement</button>
+  <button class="tab" onclick="showTab('admin')">Admin</button>
+</div>
+
+<!-- BRACKET OFFICIEL -->
+<div class="panel active" id="panel-bracket">
+  <div class="bracket-wrap">
+    <div class="bracket" id="main-bracket"></div>
+  </div>
+  <div class="hint">💡 Les résultats chargés depuis le Google Sheet sont verrouillés (badge vert). Vous pouvez saisir manuellement les matchs non encore joués.</div>
+</div>
+
+<!-- MON BRACKET -->
+<div class="panel" id="panel-my-bracket">
+  <div class="pseudo-input">
+    <input type="text" id="pseudo-field" placeholder="Votre prénom / pseudo">
+    <button class="btn primary" onclick="setPseudo()">OK</button>
+  </div>
+  <div class="progress-bg"><div class="progress-fill" id="my-progress" style="width:0%"></div></div>
+  <div class="progress-label" id="my-progress-label">0 / 15 matchs pronostiqués</div>
+  <div id="my-bracket-hint" style="font-size:13px;color:var(--muted);margin-bottom:14px">Entrez votre pseudo pour commencer.</div>
+  <div class="bracket-wrap"><div class="bracket" id="my-bracket-render"></div></div>
+  <div class="save-bar">
+    <button class="btn primary" onclick="saveMyBracket()">Enregistrer mon bracket</button>
+    <span class="save-msg" id="save-msg"></span>
+  </div>
+</div>
+
+<!-- CLASSEMENT -->
+<div class="panel" id="panel-leaderboard">
+  <div class="lb-controls">
+    <input type="text" id="search-lb" placeholder="Rechercher un participant…" oninput="renderLeaderboard()">
+    <button class="btn" onclick="renderLeaderboard()">Actualiser</button>
+  </div>
+  <table class="lb">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Participant</th>
+        <th>Points</th>
+        <th>Bonus scores</th>
+        <th>Précision</th>
+        <th>Champion pronostiqué</th>
+      </tr>
+    </thead>
+    <tbody id="lb-body"></tbody>
+  </table>
+</div>
+
+<!-- ADMIN -->
+<div class="panel" id="panel-admin">
+  <div class="admin-section">
+    <h3>Participants</h3>
+    <div class="lb-controls">
+      <input type="text" id="new-participant" placeholder="Nom du nouveau participant" style="padding:7px 12px;font-size:13px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg2);color:var(--text);width:220px">
+      <button class="btn" onclick="addParticipant()">+ Ajouter</button>
+    </div>
+    <div class="admin-grid" id="participant-list"></div>
+  </div>
+
+  <div class="admin-section">
+    <h3>Barème des points</h3>
+    <table class="pts-table">
+      <thead><tr><th>Tour</th><th>Bon gagnant</th><th>Bonus score exact</th></tr></thead>
+      <tbody>
+        <tr><td>1er tour</td><td>10 pts</td><td>+2 pts</td></tr>
+        <tr><td>Demi-finales de conférence</td><td>12 pts</td><td>+2 pts</td></tr>
+        <tr><td>Finales de conférence</td><td>15 pts</td><td>+2 pts</td></tr>
+        <tr><td>Finales NBA</td><td>20 pts</td><td>+2 pts</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="admin-section">
+    <h3>Actions</h3>
+    <div class="admin-grid">
+      <div class="admin-card">
+        <div class="ac-title">Google Sheet</div>
+        <div class="ac-sub">Ouvrir la source des résultats</div>
+        <button class="btn" onclick="window.open('https://docs.google.com/spreadsheets/d/1R7aH9kW1E9ipZxExLqVWmNqi1mvu8_QB4WbrJyXS4RA/edit','_blank')">Ouvrir le Sheet</button>
+      </div>
+      <div class="admin-card">
+        <div class="ac-title">Export CSV</div>
+        <div class="ac-sub">Télécharger le classement complet</div>
+        <button class="btn" onclick="exportCSV()">Télécharger</button>
+      </div>
+      <div class="admin-card">
+        <div class="ac-title">Réinitialiser</div>
+        <div class="ac-sub">Effacer tous les résultats officiels</div>
+        <button class="btn" onclick="resetOfficial()">Réinitialiser</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  CONSTANTES (définies dans le bloc CONFIG plus haut)
+// ============================================================
+const SCORES = ['4-0','4-1','4-2','4-3'];
+const ALL_NAMES = [...EAST_TEAMS,...WEST_TEAMS].map(t=>t.name);
+function normName(n){ return ALL_NAMES.find(t=>t.toLowerCase()===n.trim().toLowerCase())||n.trim(); }
+
+// ============================================================
+//  ÉTAT
+// ============================================================
+let official = emptyOfficial();
+// ⚠️ Remplacer cette liste par les vrais participants avant de partager
+let participants = [
+  {name:'Alice',   picks: emptyPicks()},
+  {name:'Bob',     picks: emptyPicks()},
+  {name:'Charlie', picks: emptyPicks()}
+];
+let myName = '', myPicks = emptyPicks();
+
+function emptyOfficial(){
+  return {
+    east:  Array(7).fill(null).map(()=>({winner:null, score:null, fromApi:false})),
+    west:  Array(7).fill(null).map(()=>({winner:null, score:null, fromApi:false})),
+    final: {winner:null, score:null, fromApi:false}
+  };
+}
+function emptyPicks(){
+  return {
+    east:  Array(7).fill(null).map(()=>({winner:null, score:null})),
+    west:  Array(7).fill(null).map(()=>({winner:null, score:null})),
+    final: {winner:null, score:null}
+  };
+}
+
+// ============================================================
+//  FETCH SHEET via proxy CORS (2 proxies en fallback)
+// ============================================================
+async function fetchCSV(){
+  const proxies = [
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(SHEET_CSV)}&t=${Date.now()}`,
+    `https://corsproxy.io/?${encodeURIComponent(SHEET_CSV)}`
+  ];
+  for(const url of proxies){
+    try{
+      const res = await fetch(url);
+      if(res.ok){
+        const text = await res.text();
+        if(text && text.length > 10) return text;
+      }
+    }catch(e){ /* essaye le proxy suivant */ }
+  }
+  throw new Error('Impossible de contacter le Google Sheet (CORS). Ouvrez le fichier HTML depuis un serveur web ou utilisez la saisie manuelle.');
+}
+
+async function loadFromSheet(){
+  const st = document.getElementById('sync-status');
+  st.className = 'sync-status';
+  st.innerHTML = '<span class="spin">⟳</span>';
+  setBanner('info','<span class="spin">⟳</span>&nbsp; Connexion au Google Sheet…');
+
+  try{
+    const text = await fetchCSV();
+    const rows = parseCSV(text);
+    if(!rows.length) throw new Error('Feuille vide');
+
+    const hasHeader = rows[0][0].toLowerCase() === 'winner';
+    const data = hasHeader ? rows.slice(1) : rows;
+
+    // Reset picks API
+    official.east.forEach(m=>{if(m.fromApi){m.winner=null;m.score=null;m.fromApi=false;}});
+    official.west.forEach(m=>{if(m.fromApi){m.winner=null;m.score=null;m.fromApi=false;}});
+    if(official.final.fromApi){official.final.winner=null;official.final.score=null;official.final.fromApi=false;}
+
+    let pending = data.filter(r=>r[0]&&r[1]).map(r=>({winner:normName(r[0]), score:r[1].trim()}));
+    let applied = 0, passes = 6;
+    while(pending.length && passes-->0){
+      const still=[];
+      for(const row of pending){
+        if(applyResult(row.winner, row.score)) applied++;
+        else still.push(row);
+      }
+      if(still.length === pending.length) break;
+      pending = still;
+    }
+
+    const now = new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    setBanner('success', `✓ ${applied} série(s) importée(s) depuis Google Sheet — dernière sync : ${now}`);
+    st.className = 'sync-status ok'; st.textContent = '✓ ' + now;
+
+  }catch(e){
+    setBanner('warn', `⚠ ${e.message}`);
+    st.className = 'sync-status err'; st.textContent = 'Erreur';
+  }
+
+  renderOfficialBracket();
+  renderLeaderboard();
+}
+
+function parseCSV(text){
+  return text.trim().split('\n').map(line=>{
+    const cells=[]; let cur='', inQ=false;
+    for(const ch of line){
+      if(ch==='"') inQ=!inQ;
+      else if(ch===',' && !inQ){ cells.push(cur.trim()); cur=''; }
+      else cur+=ch;
+    }
+    cells.push(cur.trim());
+    return cells;
+  });
+}
+
+function applyResult(winner, score){
+  const confs=[{conf:'east',teams:EAST_TEAMS},{conf:'west',teams:WEST_TEAMS}];
+  // R1
+  for(const {conf,teams} of confs){
+    for(let i=0;i<4;i++){
+      if(winner===teams[i*2].name || winner===teams[i*2+1].name){
+        if(!official[conf][i].fromApi){ official[conf][i].winner=winner; official[conf][i].score=score; official[conf][i].fromApi=true; cascade(official,conf); }
+        return true;
+      }
+    }
+  }
+  // R2
+  for(const {conf} of confs){
+    for(let i=0;i<2;i++){
+      const t1=official[conf][i*2].winner, t2=official[conf][i*2+1].winner;
+      if(t1&&t2&&(winner===t1||winner===t2)){
+        if(!official[conf][4+i].fromApi){ official[conf][4+i].winner=winner; official[conf][4+i].score=score; official[conf][4+i].fromApi=true; cascade(official,conf); }
+        return true;
+      }
+    }
+  }
+  // R3 conf final
+  for(const {conf} of confs){
+    const t1=official[conf][4].winner, t2=official[conf][5].winner;
+    if(t1&&t2&&(winner===t1||winner===t2)){
+      if(!official[conf][6].fromApi){ official[conf][6].winner=winner; official[conf][6].score=score; official[conf][6].fromApi=true; cascade(official,conf); }
+      return true;
+    }
+  }
+  // Finals NBA
+  const ef=official.east[6].winner, wf=official.west[6].winner;
+  if(ef&&wf&&(winner===ef||winner===wf)){
+    if(!official.final.fromApi){ official.final.winner=winner; official.final.score=score; official.final.fromApi=true; }
+    return true;
+  }
+  return false;
+}
+
+function setBanner(type, html){
+  const b = document.getElementById('main-banner');
+  b.style.display = '';
+  b.className = 'banner ' + type;
+  b.innerHTML = html;
+}
+
+// ============================================================
+//  BRACKET BUILDER
+// ============================================================
+function buildBracket(containerId, picks, onUpdate, readOnly){
+  const c = document.getElementById(containerId); c.innerHTML='';
+  const es=el('div','conf-section east'), ws=el('div','conf-section west'), fs=el('div','finals-col');
+  buildConf(es,'east',picks,onUpdate,readOnly);
+  buildConf(ws,'west',picks,onUpdate,readOnly);
+  buildFinals(fs,picks,onUpdate,readOnly);
+  c.appendChild(es); c.appendChild(fs); c.appendChild(ws);
+}
+
+function buildConf(section, conf, picks, onUpdate, readOnly){
+  const teams = conf==='east' ? EAST_TEAMS : WEST_TEAMS;
+  const confLabel = el('div','conf-label'); confLabel.textContent = conf==='east' ? 'CONFÉRENCE EST' : 'CONFÉRENCE OUEST';
+
+  const r1 = makeCol('1er tour');
+  for(let m=0;m<4;m++){
+    r1.appendChild(buildMatchup(picks[conf][m],{seed:teams[m*2].seed,name:teams[m*2].name},{seed:teams[m*2+1].seed,name:teams[m*2+1].name},(w,s)=>{picks[conf][m].winner=w;picks[conf][m].score=s;cascade(picks,conf);onUpdate();},readOnly,0));
+    r1.appendChild(el('div','matchup-gap'));
+  }
+  const r2 = makeCol('Demi-finales');
+  for(let m=0;m<2;m++){
+    const t1={seed:null,name:picks[conf][m*2].winner||'?'}, t2={seed:null,name:picks[conf][m*2+1].winner||'?'};
+    r2.appendChild(buildMatchup(picks[conf][4+m],t1,t2,(w,s)=>{picks[conf][4+m].winner=w;picks[conf][4+m].score=s;cascade(picks,conf);onUpdate();},readOnly||!picks[conf][m*2].winner||!picks[conf][m*2+1].winner,1));
+    r2.appendChild(el('div','matchup-gap'));
+  }
+  const r3 = makeCol('Finale conf.');
+  const tf1={seed:null,name:picks[conf][4].winner||'?'}, tf2={seed:null,name:picks[conf][5].winner||'?'};
+  r3.appendChild(buildMatchup(picks[conf][6],tf1,tf2,(w,s)=>{picks[conf][6].winner=w;picks[conf][6].score=s;cascade(picks,conf);onUpdate();},readOnly||!picks[conf][4].winner||!picks[conf][5].winner,2));
+
+  if(conf==='east'){ section.appendChild(r1); section.appendChild(r2); section.appendChild(r3); }
+  else             { section.appendChild(r3); section.appendChild(r2); section.appendChild(r1); }
+}
+
+function buildFinals(sec, picks, onUpdate, readOnly){
+  const col = el('div','finals-col-inner');
+  const lbl = el('div','round-label'); lbl.style.cssText='font-family:var(--font-head);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--accent);margin-bottom:8px'; lbl.textContent='FINALES NBA';
+  col.appendChild(lbl);
+  const ef=picks.east[6].winner, wf=picks.west[6].winner;
+  col.appendChild(buildMatchup(picks.final,{seed:null,name:ef||'?'},{seed:null,name:wf||'?'},(w,s)=>{picks.final.winner=w;picks.final.score=s;onUpdate();},readOnly||!ef||!wf,3));
+  const cb = el('div','champion-box');
+  cb.innerHTML=`<div class="trophy">🏆</div><div class="champ-label">CHAMPION NBA</div><div class="champ-name">${picks.final.winner||'?'}</div>${picks.final.score?`<div class="champ-score">${picks.final.score}</div>`:''}`;
+  col.appendChild(cb); sec.appendChild(col);
+}
+
+function buildMatchup(md, t1, t2, onSet, locked, ri){
+  const wrap = el('div','matchup'+(md.fromApi?' synced':''));
+  const w=md.winner, s=md.score, api=md.fromApi;
+  const tbd1=t1.name==='?', tbd2=t2.name==='?';
+
+  const mkRow=(t,isW,isE,isTbd)=>{
+    const r = el('div','team-row'+(isW?' winner':isE?' eliminated':'')+(locked||isTbd?' locked':'')+(isTbd?' tbd':''));
+    r.innerHTML=`<span class="seed">${t.seed||''}</span><span class="tname">${t.name}</span>${isW&&api?'<span class="api-badge">LIVE</span>':isW?'<span class="check">✓</span>':''}`;
+    if(!locked&&!isTbd&&!api) r.onclick=()=>onSet(t.name, md.score);
+    return r;
+  };
+  wrap.appendChild(mkRow(t1, w===t1.name, w&&w!==t1.name, tbd1));
+  wrap.appendChild(el('div','divider-h'));
+  wrap.appendChild(mkRow(t2, w===t2.name, w&&w!==t2.name, tbd2));
+
+  if(w && !tbd1 && !tbd2){
+    const sr = el('div','score-row');
+    const sl = el('span','score-label'); sl.textContent='SCORE'; sr.appendChild(sl);
+    const sb = el('div','score-btns');
+    SCORES.forEach(sc=>{
+      const b = el('button','sbtn'+(s===sc?' active':'')+(api?' api-locked':''));
+      b.textContent = sc;
+      if(!api) b.onclick=(e)=>{ e.stopPropagation(); onSet(w,sc); };
+      sb.appendChild(b);
+    });
+    sr.appendChild(sb);
+    if(api){ const lk=el('span','lock-icon'); lk.textContent='🔒'; sr.appendChild(lk); }
+    wrap.appendChild(sr);
+  }
+  return wrap;
+}
+
+function cascade(picks, conf){
+  for(let m=0;m<2;m++){
+    const t1w=picks[conf][m*2].winner, t2w=picks[conf][m*2+1].winner, r2=picks[conf][4+m];
+    if(r2.winner && r2.winner!==t1w && r2.winner!==t2w){ r2.winner=null; r2.score=null; r2.fromApi=false; }
+  }
+  const r3=picks[conf][6];
+  if(r3.winner && r3.winner!==picks[conf][4].winner && r3.winner!==picks[conf][5].winner){ r3.winner=null; r3.score=null; r3.fromApi=false; }
+}
+
+function makeCol(label){
+  const c=el('div','round-col');
+  const l=el('div','round-label'); l.textContent=label.toUpperCase();
+  c.appendChild(l); return c;
+}
+function el(tag,cls){ const e=document.createElement(tag); if(cls)e.className=cls; return e; }
+
+// ============================================================
+//  SCORING
+// ============================================================
+function computeScore(p){
+  let pts=0, bonus=0, correct=0, total=0;
+  const chk=(pm,om,ri)=>{
+    if(!om.winner) return;
+    total++;
+    if(pm.winner===om.winner){
+      pts+=ROUND_PTS[ri]; correct++;
+      if(pm.score && pm.score===om.score){ pts+=SCORE_BONUS; bonus++; }
+    }
+  };
+  for(let i=0;i<7;i++){ const ri=i<4?0:i<6?1:2; chk(p.picks.east[i],official.east[i],ri); chk(p.picks.west[i],official.west[i],ri); }
+  chk(p.picks.final, official.final, 3);
+  return {pts, bonus, correct, total};
+}
+
+// ============================================================
+//  RENDER
+// ============================================================
+function renderOfficialBracket(){ buildBracket('main-bracket', official, ()=>{ renderOfficialBracket(); renderLeaderboard(); }, false); }
+
+function renderMyBracket(){
+  if(!myName){ document.getElementById('my-bracket-render').innerHTML=''; return; }
+  buildBracket('my-bracket-render', myPicks, ()=>{ updateProgress(); renderMyBracket(); }, false);
+  updateProgress();
+}
+function updateProgress(){
+  let done=0;
+  for(let i=0;i<7;i++){ if(myPicks.east[i].winner)done++; if(myPicks.west[i].winner)done++; }
+  if(myPicks.final.winner) done++;
+  document.getElementById('my-progress').style.width = Math.round(done/15*100)+'%';
+  document.getElementById('my-progress-label').textContent = `${done} / 15 matchs pronostiqués`;
+}
+
+function renderLeaderboard(){
+  const search = (document.getElementById('search-lb')||{value:''}).value.toLowerCase();
+  const sorted = participants.map(p=>({...p,sc:computeScore(p)})).sort((a,b)=>b.sc.pts-a.sc.pts);
+  const tbody = document.getElementById('lb-body'); tbody.innerHTML='';
+  sorted.filter(p=>!search||p.name.toLowerCase().includes(search)).forEach((p,i)=>{
+    const rc = i===0?'gold':i===1?'silver':i===2?'bronze':'';
+    const acc = p.sc.total ? `${p.sc.correct}/${p.sc.total}` : '—';
+    const tr = document.createElement('tr');
+    tr.innerHTML=`<td><span class="rank-badge ${rc}">${i+1}</span></td><td>${p.name}</td><td><span class="pts-big">${p.sc.pts}</span> pts</td><td class="bonus-cell">+${p.sc.bonus*SCORE_BONUS} pts (${p.sc.bonus} score${p.sc.bonus>1?'s':''})</td><td class="detail-cell">${acc}</td><td>${p.picks.final.winner||'—'}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderAdmin(){
+  const list = document.getElementById('participant-list'); list.innerHTML='';
+  participants.forEach((p,i)=>{
+    const sc = computeScore(p);
+    const card = el('div','admin-card');
+    card.innerHTML=`<div class="ac-title">${p.name}</div><div class="ac-sub">${sc.pts} pts • Champion: ${p.picks.final.winner||'—'}</div><button class="btn" style="margin-top:8px" onclick="removeParticipant(${i})">Supprimer</button>`;
+    list.appendChild(card);
+  });
+}
+
+// ============================================================
+//  ACTIONS
+// ============================================================
+function showTab(id){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  document.querySelectorAll('.tab')[['bracket','my-bracket','leaderboard','admin'].indexOf(id)].classList.add('active');
+  if(id==='leaderboard') renderLeaderboard();
+  if(id==='admin') renderAdmin();
+  if(id==='my-bracket') renderMyBracket();
+}
+
+function setPseudo(){
+  const n = document.getElementById('pseudo-field').value.trim(); if(!n) return;
+  myName = n;
+  document.getElementById('my-bracket-hint').textContent = `Bonjour ${n} ! Cliquez sur chaque équipe gagnante puis choisissez le score de la série.`;
+  const ex = participants.find(p=>p.name===n);
+  myPicks = ex ? JSON.parse(JSON.stringify(ex.picks)) : emptyPicks();
+  renderMyBracket();
+}
+
+function saveMyBracket(){
+  if(!myName){ alert('Entrez votre pseudo d\'abord'); return; }
+  const idx = participants.findIndex(p=>p.name===myName);
+  const copy = JSON.parse(JSON.stringify(myPicks));
+  if(idx>=0) participants[idx].picks=copy; else participants.push({name:myName, picks:copy});
+  document.getElementById('save-msg').textContent='✓ Bracket enregistré !';
+  setTimeout(()=>document.getElementById('save-msg').textContent='', 2500);
+}
+
+function addParticipant(){
+  const input = document.getElementById('new-participant'); const n = input.value.trim();
+  if(!n || participants.find(p=>p.name===n)) return;
+  participants.push({name:n, picks:emptyPicks()}); input.value=''; renderAdmin();
+}
+
+function removeParticipant(i){
+  if(!confirm(`Supprimer ${participants[i].name} ?`)) return;
+  participants.splice(i,1); renderAdmin();
+}
+
+function resetOfficial(){
+  if(!confirm('Réinitialiser tous les résultats officiels ?')) return;
+  official = emptyOfficial(); renderOfficialBracket();
+  setBanner('info','Résultats réinitialisés.');
+}
+
+function exportCSV(){
+  let csv='Participant,Points,Bonus scores,Champion\n';
+  participants.forEach(p=>{ const s=computeScore(p); csv+=`${p.name},${s.pts},${s.bonus*SCORE_BONUS},${p.picks.final.winner||''}\n`; });
+  const a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download='nba_bracket_2025.csv'; a.click();
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+renderOfficialBracket();
+loadFromSheet();
+</script>
+</body>
+</html>
